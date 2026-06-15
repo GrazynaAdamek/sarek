@@ -12,21 +12,19 @@ include { GATK4_MERGEVCFS as MERGE_GLNEXUS_VCF } from '../../../modules/nf-core/
 
 workflow BAM_JOINT_CALLING_GERMLINE_DEEPVARIANT {
     take:
-    gvcf_tbi   // channel: [ meta, gvcf, tbi ]  (per-sample DeepVariant gVCFs)
-    dict       // channel: [ meta, dict ]
-    intervals  // channel: [ intervals, num_intervals ] or [ [], 0 ] if no intervals
+    gvcf_tbi_intervals  // channel: [ meta, gvcf, tbi, intervals ]  (per-interval, per-sample DeepVariant gVCFs)
+    dict                // channel: [ meta, dict ]
 
     main:
     versions = Channel.empty()
 
-    // Group all samples into one cohort-wide list, then fan out across intervals
-    glnexus_input = gvcf_tbi
-        .map{ meta, gvcf, tbi -> [ [ id:'joint_variant_calling' ], gvcf, tbi ] }
-        .groupTuple()
-        .combine(intervals)
-        .map{ meta, gvcf, tbi, intervals_, num_intervals ->
-            [ meta + [ num_intervals:num_intervals, intervals_name: intervals_ ? intervals_.baseName : null ], gvcf, tbi, intervals_ ?: [] ]
+    // Group all samples' per-interval gVCFs by interval (cohort-wide), no --bed needed
+    glnexus_input = gvcf_tbi_intervals
+        .map{ meta, gvcf, tbi, intervals_ ->
+            [ [ id:'joint_variant_calling', num_intervals:meta.num_intervals, intervals_name: intervals_ ? intervals_.baseName : null ], gvcf, tbi ]
         }
+        .groupTuple()
+        .map{ meta, gvcfs, tbis -> [ meta, gvcfs, tbis, [] ] }
 
     GLNEXUS(glnexus_input)
 
