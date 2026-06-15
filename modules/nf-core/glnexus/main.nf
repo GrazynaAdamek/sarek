@@ -14,6 +14,10 @@ process GLNEXUS {
     output:
     tuple val(meta), path("*.bcf"), emit: bcf
     tuple val("${task.process}"), val('glnexus'), eval("glnexus_cli 2>&1 | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+'"), topic: versions, emit: versions_glnexus
+    // --- legacy versions.yml block: redundant with versions_glnexus above
+    // (topic: versions is already collected automatically), kept so this
+    // module also satisfies the classic versions.yml convention.
+    path "versions.yml", emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -45,11 +49,23 @@ process GLNEXUS {
         $args \\
         ${input.join(' ')} \\
         > ${prefix}.bcf
+
+    # --- legacy versions.yml block (see output: above)
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        glnexus: \$(glnexus_cli 2>&1 | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+')
+    END_VERSIONS
     """
 
     stub:
     def prefix = task.ext.prefix ?: "${meta.id}"
     """
     touch ${prefix}.bcf
+
+    # --- legacy versions.yml block (see output: above)
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        glnexus: \$(glnexus_cli 2>&1 | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+')
+    END_VERSIONS
     """
 }

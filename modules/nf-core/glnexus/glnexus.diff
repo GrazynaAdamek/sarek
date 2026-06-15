@@ -15,11 +15,23 @@ Changes in 'glnexus/meta.yml':
      - custom_config:
          type: file
          description: Custom YML config for additional profiles
+@@ -60,6 +66,11 @@
+       - glnexus_cli 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+':
+           type: eval
+           description: The expression to obtain the version of the tool
++  versions:
++    - - versions.yml:
++          type: file
++          description: File containing software versions
++          pattern: "versions.yml"
+ topics:
+   versions:
+     - - ${task.process}:
 
 Changes in 'glnexus/main.nf':
 --- modules/nf-core/glnexus/main.nf
 +++ modules/nf-core/glnexus/main.nf
-@@ -8,7 +8,7 @@
+@@ -8,12 +8,16 @@
          'community.wave.seqera.io/library/bcftools_glnexus:cf380f1a6410f606' }"
  
      input:
@@ -28,7 +40,16 @@ Changes in 'glnexus/main.nf':
      tuple val(meta2), path(bed)
  
      output:
-@@ -32,6 +32,12 @@
+     tuple val(meta), path("*.bcf"), emit: bcf
+     tuple val("${task.process}"), val('glnexus'), eval("glnexus_cli 2>&1 | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+'"), topic: versions, emit: versions_glnexus
++    // --- legacy versions.yml block: redundant with versions_glnexus above
++    // (topic: versions is already collected automatically), kept so this
++    // module also satisfies the classic versions.yml convention.
++    path "versions.yml", emit: versions
+ 
+     when:
+     task.ext.when == null || task.ext.when
+@@ -32,6 +36,12 @@
          avail_mem = task.memory.giga
      }
      """
@@ -41,6 +62,30 @@ Changes in 'glnexus/main.nf':
      glnexus_cli \\
          --threads $task.cpus \\
          --mem-gbytes $avail_mem \\
+@@ -39,11 +49,23 @@
+         $args \\
+         ${input.join(' ')} \\
+         > ${prefix}.bcf
++
++    # --- legacy versions.yml block (see output: above)
++    cat <<-END_VERSIONS > versions.yml
++    "${task.process}":
++        glnexus: \$(glnexus_cli 2>&1 | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+')
++    END_VERSIONS
+     """
+ 
+     stub:
+     def prefix = task.ext.prefix ?: "${meta.id}"
+     """
+     touch ${prefix}.bcf
++
++    # --- legacy versions.yml block (see output: above)
++    cat <<-END_VERSIONS > versions.yml
++    "${task.process}":
++        glnexus: \$(glnexus_cli 2>&1 | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+')
++    END_VERSIONS
+     """
+ }
 
 'modules/nf-core/glnexus/environment.yml' is unchanged
 'modules/nf-core/glnexus/tests/main.nf.test.snap' is unchanged

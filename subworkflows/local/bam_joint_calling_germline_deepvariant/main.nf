@@ -59,8 +59,11 @@ workflow BAM_JOINT_CALLING_GERMLINE_DEEPVARIANT {
     genotype_index = Channel.empty().mix(MERGE_GLNEXUS_VCF.out.tbi, TABIX_TABIX.out.tbi)
         .map{ meta, tbi -> [ meta - meta.subMap('num_intervals', 'intervals_name') + [ id:'joint_variant_calling', patient:'all_samples', variantcaller:'deepvariant' ], tbi ] }
 
-    // GLNEXUS versions are reported via the `versions` topic channel (collected
-    // automatically in workflows/sarek/main.nf), not a classic versions.yml output.
+    // --- legacy versions.yml block: GLNEXUS versions are also reported via
+    // the `versions` topic channel (collected automatically in
+    // workflows/sarek/main.nf); mixing in GLNEXUS.out.versions here is
+    // redundant but keeps it consistent with the other modules below.
+    versions = versions.mix(GLNEXUS.out.versions)
     versions = versions.mix(BCFTOOLS_VIEW.out.versions)
     versions = versions.mix(MERGE_GLNEXUS_VCF.out.versions)
     versions = versions.mix(TABIX_TABIX.out.versions)

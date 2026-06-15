@@ -129,6 +129,7 @@ process GLNEXUS {
     output:
     tuple val(meta), path("*.bcf"), emit: bcf
     tuple val("${task.process}"), val('glnexus'), eval(...), topic: versions, emit: versions_glnexus
+    path "versions.yml", emit: versions
     ...
 }
 ```
@@ -144,6 +145,10 @@ Patch details and why:
 - **`rm -rf GLnexus.DB`** (added) — `glnexus_cli` refuses to start if its
   scratch DB directory already exists; this guard makes `task.attempt`
   retries safe.
+- **`path "versions.yml", emit: versions`** (added) — writes and emits a
+  classic `versions.yml`, redundant with `versions_glnexus` below but kept
+  to satisfy the literal "...versions.yml" deliverable requirement (see
+  note below).
 - Everything else (container/Wave management, conda `environment.yml`,
   `--mem-gbytes` defaulting, optional `--bed` via the second input tuple, the
   topic-based `versions` output) is kept as shipped upstream, so
@@ -161,6 +166,14 @@ Patch details and why:
   collected correctly by the pipeline; the topic-based approach is newer and
   may be adopted by other nf-core modules over time via
   `nf-core modules update`.
+- As an additional patch on top of upstream, the module also writes a
+  classic `versions.yml` file and emits it via `emit: versions` (mixed into
+  `versions` in the subworkflow like the other modules). This is redundant
+  with `versions_glnexus`/`topic: versions` above — both end up reporting
+  the same `glnexus` version into the pipeline's aggregated versions report
+  — but it directly satisfies the task's literal "...with container, inputs,
+  outputs, and versions.yml" requirement without removing the newer
+  topic-based mechanism the upstream module ships with.
 
 ### `subworkflows/local/bam_joint_calling_germline_deepvariant/main.nf`
 
