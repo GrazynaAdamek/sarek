@@ -121,17 +121,9 @@ workflow BAM_VARIANT_CALLING_GERMLINE_ALL {
         versions = versions.mix(BAM_VARIANT_CALLING_DEEPVARIANT.out.versions)
 
         if (joint_genotype) {
-            // BAM_VARIANT_CALLING_DEEPVARIANT emits gvcf and gvcf_tbi as two separate channels
-            // (its pre-existing output shape, unchanged to avoid affecting other consumers).
-            // Joined here, at the call site, rather than inside BAM_JOINT_CALLING_GERMLINE_DEEPVARIANT,
-            // to match the vcf.join(tbi, ...) pattern used elsewhere in this file.
-            gvcf_tbi_deepvariant = BAM_VARIANT_CALLING_DEEPVARIANT.out.gvcf
-                .join(BAM_VARIANT_CALLING_DEEPVARIANT.out.gvcf_tbi, failOnDuplicate: true, failOnMismatch: true)
-
             BAM_JOINT_CALLING_GERMLINE_DEEPVARIANT(
-                gvcf_tbi_deepvariant,
-                dict,
-                intervals
+                BAM_VARIANT_CALLING_DEEPVARIANT.out.gvcf_tbi_intervals,
+                dict
             )
 
             vcf_deepvariant = BAM_JOINT_CALLING_GERMLINE_DEEPVARIANT.out.genotype_vcf

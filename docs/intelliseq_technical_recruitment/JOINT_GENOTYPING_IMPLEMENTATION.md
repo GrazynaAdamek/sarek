@@ -21,6 +21,12 @@ GATK's `--joint_germline` already solves this for HaplotypeCaller via
 GenomicsDBImport + GenotypeGVCFs + VQSR — but that pipeline is GATK-specific
 and overkill for DeepVariant gVCFs.
 
+This isn't just a stylistic preference: `GenomicsDBImport`/`GenotypeGVCFs` assume
+GATK HaplotypeCaller's gVCF conventions (its genotype-likelihood model,
+`<NON_REF>` symbolic allele handling, `PL`/`AD` field semantics). DeepVariant's
+gVCFs encode genotype likelihoods from a different (CNN-based) model, so GATK's
+joint-genotyping tools aren't designed or validated to merge them correctly.
+
 **GLnexus** (`glnexus_cli --config DeepVariant`) is the standard companion
 tool for DeepVariant: it merges per-sample gVCFs directly into one
 multi-sample BCF in a single step, with a config preset tuned for
@@ -28,6 +34,9 @@ DeepVariant's gVCF conventions. No GenomicsDB step is needed. There is no
 nf-core module for it, so a small local module was added
 (`modules/local/glnexus/`), following the conventions of other "no-conda"
 binary tool modules in this repo (e.g. `deepvariant/rundeepvariant`).
+GLnexus's `--config DeepVariant` preset is purpose-built for DeepVariant's
+gVCF representation — using it (instead of GATK's tools) is a correctness
+requirement (matching tool to gVCF format), not a stylistic choice.
 
 ## 3. High-level architecture
 
@@ -67,14 +76,20 @@ long-running, memory-hungry, non-resumable job. That's a poor fit for
 production (one OOM/preemption near the end re-runs everything) and for cost
 on spot/preemptible instances.
 
-**Solution:** mirror the scatter/gather pattern DeepVariant itself already
-uses for variant calling, reusing the *same* `intervals` channel:
+**Solution:** mirror the scatter/gather pattern `joint_germline` already uses
+for HaplotypeCaller — group the cohort's **per-interval, per-sample** gVCFs by
+interval, so each GLnexus invocation only ever sees the gVCFs for one region:
 
-- `gvcf_tbi` from all samples is grouped into one cohort-wide list
-  (`meta = [id: 'joint_variant_calling']`) and then `.combine(intervals)`'d,
-  so GLnexus runs **once per interval** (e.g. once per chromosome), each
-  invocation processing the *whole cohort* but restricted to that region via
-  `--bed`.
+- `BAM_VARIANT_CALLING_DEEPVARIANT` exposes a new `gvcf_tbi_intervals` emit —
+  the **per-interval** gVCF/tbi for each sample (before they get merged into
+  the whole-genome `gvcf`/`gvcf_tbi` used elsewhere), built the same way
+  HaplotypeCaller's `gvcf_tbi_intervals` is (joining the per-interval gVCF/tbi
+  with `cram_intervals`).
+- `BAM_JOINT_CALLING_GERMLINE_DEEPVARIANT` groups these by `intervals_name`
+  across all samples (`groupTuple()`), so GLnexus runs **once per interval**
+  (e.g. once per chromosome), each invocation processing only that region's
+  gVCFs for the whole cohort — **no `--bed` needed**, since the input gVCFs
+  are already restricted to that interval.
 - Each per-interval result (BCF → VCF via `BCFTOOLS_VIEW`) is then gathered
   back into a single cohort VCF with `GATK4_MERGEVCFS` (aliased
   `MERGE_GLNEXUS_VCF`) — the exact same merge module DeepVariant itself uses
@@ -86,8 +101,10 @@ uses for variant calling, reusing the *same* `intervals` channel:
 This means with, say, 24 intervals (one per chromosome), 24 GLnexus jobs run
 in parallel, each handling all ~1000 samples but only for its chromosome,
 instead of one job processing the entire genome for 1000 samples at once.
-Failures/preemptions only cost one interval's worth of work and retry
-(`task.attempt`) independently.
+Because each job only stages the small per-interval gVCFs (not the
+whole-genome gVCF restricted via `--bed`), there's no redundant staging of
+each sample's full gVCF once per interval. Failures/preemptions only cost one
+interval's worth of work and retry (`task.attempt`) independently.
 
 ## 5. New files
 
@@ -133,13 +150,12 @@ Key implementation details and why:
 ```groovy
 workflow BAM_JOINT_CALLING_GERMLINE_DEEPVARIANT {
     take:
-    gvcf_tbi   // [ meta, gvcf, tbi ] per sample
+    gvcf_tbi_intervals  // [ meta, gvcf, tbi, intervals ] per-interval, per sample
     dict
-    intervals  // [ intervals, num_intervals ] or [ [], 0 ]
 
     main:
-    // 1. group all samples into one cohort set, fan out across intervals
-    // 2. GLNEXUS per interval (--bed restricted)
+    // 1. group all samples' per-interval gVCFs by interval (cohort-wide)
+    // 2. GLNEXUS per interval (no --bed needed, inputs already per-interval)
     // 3. BCFTOOLS_VIEW: BCF -> VCF.gz
     // 4. branch on num_intervals:
     //      >1  -> MERGE_GLNEXUS_VCF (GATK4 MergeVcfs) gathers per-interval VCFs
@@ -172,12 +188,29 @@ single-element lists instead of merging the cohort VCF back together.
 
 ### `subworkflows/local/bam_variant_calling_deepvariant/main.nf`
 
-Added a `gvcf_tbi` emit (the gVCF index), built the same way the existing
-`tbi` emit is built for the VCF — via a new `gvcf_tbi_out` branch on
-`DEEPVARIANT_RUNDEEPVARIANT.out.gvcf_index`, mixed with
-`MERGE_DEEPVARIANT_GVCF.out.tbi` for the multi-interval case. Previously the
-subworkflow emitted the gVCF itself but not its index, which the joint
-genotyping subworkflow needs.
+Added two new emits:
+
+- `gvcf_tbi` — the gVCF index, built the same way the existing `tbi` emit is
+  built for the VCF (via a new `gvcf_tbi_out` branch on
+  `DEEPVARIANT_RUNDEEPVARIANT.out.gvcf_index`, mixed with
+  `MERGE_DEEPVARIANT_GVCF.out.tbi` for the multi-interval case). Previously
+  the subworkflow emitted the gVCF itself but not its index.
+- `gvcf_tbi_intervals` — the **per-interval, per-sample** gVCF/tbi (before
+  merging into the whole-genome `gvcf`/`gvcf_tbi`), built the same way
+  HaplotypeCaller's `gvcf_tbi_intervals` is — joining
+  `DEEPVARIANT_RUNDEEPVARIANT.out.gvcf`/`.out.gvcf_index` with
+  `cram_intervals` (already computed for the scatter):
+
+```groovy
+gvcf_tbi_intervals = DEEPVARIANT_RUNDEEPVARIANT.out.gvcf
+    .join(DEEPVARIANT_RUNDEEPVARIANT.out.gvcf_index, failOnMismatch: true)
+    .join(cram_intervals, failOnMismatch: true)
+    .map{ meta, gvcf, tbi, cram, crai, intervals -> [ meta, gvcf, tbi, intervals ] }
+```
+
+This is what the joint genotyping subworkflow consumes, so each GLnexus
+invocation only ever sees gVCFs already restricted to one interval (see
+section 4).
 
 ### `subworkflows/local/bam_variant_calling_germline_all/main.nf`
 
@@ -188,10 +221,10 @@ genotyping subworkflow needs.
 
 ```groovy
 if (joint_genotype) {
-    gvcf_tbi_deepvariant = BAM_VARIANT_CALLING_DEEPVARIANT.out.gvcf
-        .join(BAM_VARIANT_CALLING_DEEPVARIANT.out.gvcf_tbi, failOnMismatch: true)
-
-    BAM_JOINT_CALLING_GERMLINE_DEEPVARIANT(gvcf_tbi_deepvariant, dict, intervals)
+    BAM_JOINT_CALLING_GERMLINE_DEEPVARIANT(
+        BAM_VARIANT_CALLING_DEEPVARIANT.out.gvcf_tbi_intervals,
+        dict
+    )
 
     vcf_deepvariant = BAM_JOINT_CALLING_GERMLINE_DEEPVARIANT.out.genotype_vcf
     tbi_deepvariant = BAM_JOINT_CALLING_GERMLINE_DEEPVARIANT.out.genotype_index
@@ -201,15 +234,16 @@ if (joint_genotype) {
 
 This is exactly the same shape as how `joint_germline` swaps
 `vcf_haplotypecaller`/`tbi_haplotypecaller` for the joint-genotyped GATK
-output — by overwriting `vcf_deepvariant`/`tbi_deepvariant` *before* they're
-mixed into `vcf_all`/`tbi_all`, every downstream consumer
+output (which is fed directly from
+`BAM_VARIANT_CALLING_HAPLOTYPECALLER.out.gvcf_tbi_intervals`, with no join at
+the call site either) — by overwriting `vcf_deepvariant`/`tbi_deepvariant`
+*before* they're mixed into `vcf_all`/`tbi_all`, every downstream consumer
 (`POST_VARIANTCALLING`, `vcf_to_annotate`, `VCF_ANNOTATE_ALL`) automatically
 receives the single multi-sample VCF instead of N per-sample VCFs — **no
 changes needed in the annotation subworkflow at all**.
 
-`dict` and `intervals` were already `take:` parameters of this subworkflow
-(used to scatter DeepVariant itself), so they're simply forwarded — the joint
-genotyping scatter reuses the exact same interval split as variant calling.
+`dict` was already a `take:` parameter of this subworkflow, so it's simply
+forwarded.
 
 ### `workflows/sarek/main.nf`
 

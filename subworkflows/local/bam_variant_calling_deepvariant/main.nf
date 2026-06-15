@@ -27,6 +27,12 @@ workflow BAM_VARIANT_CALLING_DEEPVARIANT {
 
     DEEPVARIANT_RUNDEEPVARIANT(cram_intervals, fasta, fasta_fai, [ [ id:'null' ], [] ], [ [ id:'null' ], [] ])
 
+    // For joint genotyping: per-interval, per-sample gVCFs (before merging)
+    gvcf_tbi_intervals = DEEPVARIANT_RUNDEEPVARIANT.out.gvcf
+        .join(DEEPVARIANT_RUNDEEPVARIANT.out.gvcf_index, failOnMismatch: true)
+        .join(cram_intervals, failOnMismatch: true)
+        .map{ meta, gvcf, tbi, cram, crai, intervals -> [ meta, gvcf, tbi, intervals ] }
+
     // Figuring out if there is one or more vcf(s) from the same sample
     vcf_out = DEEPVARIANT_RUNDEEPVARIANT.out.vcf.branch{
         // Use meta.num_intervals to asses number of intervals
@@ -88,6 +94,7 @@ workflow BAM_VARIANT_CALLING_DEEPVARIANT {
     emit:
     gvcf
     gvcf_tbi
+    gvcf_tbi_intervals
     vcf
     tbi
 
