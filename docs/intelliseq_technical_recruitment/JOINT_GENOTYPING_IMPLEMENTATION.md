@@ -30,13 +30,18 @@ joint-genotyping tools aren't designed or validated to merge them correctly.
 **GLnexus** (`glnexus_cli --config DeepVariant`) is the standard companion
 tool for DeepVariant: it merges per-sample gVCFs directly into one
 multi-sample BCF in a single step, with a config preset tuned for
-DeepVariant's gVCF conventions. No GenomicsDB step is needed. There is no
-nf-core module for it, so a small local module was added
-(`modules/local/glnexus/`), following the conventions of other "no-conda"
-binary tool modules in this repo (e.g. `deepvariant/rundeepvariant`).
-GLnexus's `--config DeepVariant` preset is purpose-built for DeepVariant's
-gVCF representation — using it (instead of GATK's tools) is a correctness
+DeepVariant's gVCF conventions. No GenomicsDB step is needed. GLnexus's
+`--config DeepVariant` preset is purpose-built for DeepVariant's gVCF
+representation — using it (instead of GATK's tools) is a correctness
 requirement (matching tool to gVCF format), not a stylistic choice.
+
+The official `nf-core/modules` GLnexus module
+(`modules/nf-core/glnexus/`) is used, installed via `nf-core modules install`
+and locally patched (`modules/nf-core/glnexus/glnexus.diff`, applied via
+`nf-core modules patch`) to add the `.tbi` index staging and retry-safety
+handling this pipeline needs (see section 5). `--config DeepVariant` is
+supplied via `ext.args` in `conf/modules/deepvariant_joint_genotype.config`
+rather than hardcoded in the module, keeping the module close to upstream.
 
 ## 3. High-level architecture
 
@@ -52,7 +57,7 @@ per-sample CRAM ──► DEEPVARIANT_RUNDEEPVARIANT (scatter per interval)
                           ├── group ALL samples' gVCFs into one cohort set
                           ├── fan out across the same `intervals` used for
                           │   variant calling (scatter)
-                          ├── GLNEXUS  (--config DeepVariant, --bed <interval>)
+                          ├── GLNEXUS  (--config DeepVariant, per-interval gVCFs, no --bed)
                           ├── BCFTOOLS_VIEW   (BCF → VCF.gz)
                           ├── MERGE_GLNEXUS_VCF (GATK4 MergeVcfs, gather)
                           │   or TABIX_TABIX if only one interval
@@ -108,42 +113,54 @@ interval's worth of work and retry (`task.attempt`) independently.
 
 ## 5. New files
 
-### `modules/local/glnexus/main.nf`
+### `modules/nf-core/glnexus/main.nf` (+ `glnexus.diff`)
+
+Installed from `nf-core/modules` (`nf-core modules install glnexus`) and
+locally patched (`nf-core modules patch glnexus`, recorded in
+`modules/nf-core/glnexus/glnexus.diff`):
 
 ```groovy
 process GLNEXUS {
     ...
-    container "quay.io/mlin/glnexus:v1.3.1"
+    container "${ ... 'community.wave.seqera.io/library/bcftools_glnexus:...' }"
     input:
-    tuple val(meta), path(gvcfs), path(tbis), path(intervals)
+    tuple val(meta), path(gvcfs), path(tbis), path(custom_config)
+    tuple val(meta2), path(bed)
     output:
-    tuple val(meta), path("${prefix}.bcf"), emit: bcf
-    path "versions.yml", emit: versions
+    tuple val(meta), path("*.bcf"), emit: bcf
+    tuple val("${task.process}"), val('glnexus'), eval(...), topic: versions, emit: versions_glnexus
     ...
 }
 ```
 
-Key implementation details and why:
+Patch details and why:
 
-- **`path(tbis)`** — the gVCF `.tbi` indexes aren't referenced on the command
-  line, but GLnexus needs them present on disk next to the gVCFs, so they're
-  declared as a staged input.
-- **`--bed ${intervals}`** (conditional) — enables the per-interval scatter
-  described above; omitted entirely when no intervals are used.
-- **`ulimit -n 65536`** — GLnexus opens every sample's gVCF simultaneously;
-  at ~1000 samples the default open-file limit (1024) would be exceeded.
-- **`--mem-gbytes` = 90% of `task.memory`** — GLnexus's internal cache size is
-  tied to the task's memory allocation, with 10% headroom left for the
-  process itself and htslib buffers (avoids OOM at the cache boundary).
-- **gVCF manifest file (`gvcf.list`)** — paths are written to a file and
-  expanded via `$(cat gvcf.list)` rather than inlined directly, for
-  reproducibility/debuggability. At ~1000 samples (~50KB of paths) this is
-  still well under typical `ARG_MAX` (~2MB), so no `xargs`/batching is needed.
-- **`rm -rf GLnexus.DB`** — `glnexus_cli` refuses to start if its scratch DB
-  directory already exists; this guard makes `task.attempt` retries safe.
-- No `conda`/`environment.yml` — like `DEEPVARIANT_RUNDEEPVARIANT`, GLnexus is
-  a complex statically-linked binary not packaged for conda; container-only,
-  matching the existing precedent in this repo.
+- **`path(tbis)`** (added) — the gVCF `.tbi` indexes aren't referenced on the
+  command line, but GLnexus needs them present on disk next to the gVCFs, so
+  they're declared as a staged input alongside `gvcfs`.
+- **`ulimit -n 65536`** (added) — GLnexus opens every sample's gVCF
+  simultaneously; at ~1000 samples the default open-file limit (1024) would
+  be exceeded.
+- **`rm -rf GLnexus.DB`** (added) — `glnexus_cli` refuses to start if its
+  scratch DB directory already exists; this guard makes `task.attempt`
+  retries safe.
+- Everything else (container/Wave management, conda `environment.yml`,
+  `--mem-gbytes` defaulting, optional `--bed` via the second input tuple, the
+  topic-based `versions` output) is kept as shipped upstream, so
+  `nf-core modules update` remains viable.
+- `--config DeepVariant` is **not** in the module — it's supplied via
+  `ext.args` in `conf/modules/deepvariant_joint_genotype.config`.
+- The `versions_glnexus` output uses Nextflow's `topic: versions` mechanism;
+  sarek's `workflows/sarek/main.nf` already does
+  `versions.mix(channel.topic("versions"))`, so this is picked up
+  automatically without any extra wiring in the subworkflow.
+- Note: this `topic: versions` mechanism is newer than the classic
+  `versions.yml` emit used by the other modules in this subworkflow
+  (`BCFTOOLS_VIEW`, `MERGE_GLNEXUS_VCF`, `TABIX_TABIX`), which are still
+  collected via explicit `versions.mix(MODULE.out.versions)` calls. Both are
+  collected correctly by the pipeline; the topic-based approach is newer and
+  may be adopted by other nf-core modules over time via
+  `nf-core modules update`.
 
 ### `subworkflows/local/bam_joint_calling_germline_deepvariant/main.nf`
 

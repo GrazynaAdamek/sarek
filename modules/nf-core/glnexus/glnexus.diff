@@ -1,0 +1,83 @@
+Changes in component 'nf-core/glnexus'
+Changes in 'glnexus/meta.yml':
+--- modules/nf-core/glnexus/meta.yml
++++ modules/nf-core/glnexus/meta.yml
+@@ -23,6 +23,12 @@
+         type: list
+         description: Input genomic vcf files
+         pattern: "*.{gvcf,gvcf.gz,g.vcf,g.vcf.gz}"
++    - tbis:
++        type: list
++        description: Tabix indexes for the input gVCF files. Not referenced on the
++          command line, but glnexus_cli requires them to be present alongside the
++          gVCFs.
++        pattern: "*.{gvcf,gvcf.gz,g.vcf,g.vcf.gz}.tbi"
+     - custom_config:
+         type: file
+         description: Custom YML config for additional profiles
+
+Changes in 'glnexus/main.nf':
+--- modules/nf-core/glnexus/main.nf
++++ modules/nf-core/glnexus/main.nf
+@@ -8,7 +8,7 @@
+         'community.wave.seqera.io/library/bcftools_glnexus:cf380f1a6410f606' }"
+ 
+     input:
+-    tuple val(meta), path(gvcfs), path(custom_config)
++    tuple val(meta), path(gvcfs), path(tbis), path(custom_config)
+     tuple val(meta2), path(bed)
+ 
+     output:
+@@ -32,6 +32,12 @@
+         avail_mem = task.memory.giga
+     }
+     """
++    ulimit -n 65536
++
++    # Fresh scratch DB dir per attempt: glnexus_cli refuses to start if
++    # GLnexus.DB already exists (relevant on task.attempt retries)
++    rm -rf GLnexus.DB
++
+     glnexus_cli \\
+         --threads $task.cpus \\
+         --mem-gbytes $avail_mem \\
+
+'modules/nf-core/glnexus/environment.yml' is unchanged
+'modules/nf-core/glnexus/tests/main.nf.test.snap' is unchanged
+Changes in 'glnexus/tests/main.nf.test':
+--- modules/nf-core/glnexus/tests/main.nf.test
++++ modules/nf-core/glnexus/tests/main.nf.test
+@@ -19,6 +19,7 @@
+                         file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/gvcf/test.genome.vcf.gz', checkIfExists: true),
+                         file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/gvcf/test2.genome.vcf.gz', checkIfExists: true),
+                     ],
++                    [],
+                     []
+                 ])
+                 input[1] = [[],[]]
+@@ -46,6 +47,7 @@
+                         file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/gvcf/test.genome.vcf.gz', checkIfExists: true),
+                         file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/gvcf/test2.genome.vcf.gz', checkIfExists: true),
+                     ],
++                    [],
+                     file(params.modules_testdata_base_path + '/delete_me/glnexus/gatk.yml', checkIfExists: true)
+                 ])
+                 input[1] = [[],[]]
+@@ -73,6 +75,7 @@
+                         file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/gvcf/test.genome.vcf.gz', checkIfExists: true),
+                         file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/gvcf/test2.genome.vcf.gz', checkIfExists: true),
+                     ],
++                    [],
+                     []
+                 ])
+                 input[1] = [
+@@ -105,6 +108,7 @@
+                         file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/gvcf/test.genome.vcf.gz', checkIfExists: true),
+                         file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/gvcf/test2.genome.vcf.gz', checkIfExists: true),
+                     ],
++                    [],
+                     []
+                 ])
+                 input[1] = [
+
+************************************************************

@@ -5,7 +5,7 @@
 // scattered/gathered over the same intervals used for variant calling.
 //
 
-include { GLNEXUS                              } from '../../../modules/local/glnexus/main'
+include { GLNEXUS                              } from '../../../modules/nf-core/glnexus/main'
 include { BCFTOOLS_VIEW                        } from '../../../modules/nf-core/bcftools/view/main'
 include { TABIX_TABIX                          } from '../../../modules/nf-core/tabix/tabix/main'
 include { GATK4_MERGEVCFS as MERGE_GLNEXUS_VCF } from '../../../modules/nf-core/gatk4/mergevcfs/main'
@@ -26,7 +26,8 @@ workflow BAM_JOINT_CALLING_GERMLINE_DEEPVARIANT {
         .groupTuple()
         .map{ meta, gvcfs, tbis -> [ meta, gvcfs, tbis, [] ] }
 
-    GLNEXUS(glnexus_input)
+    // No --bed needed: gVCFs are already split per interval
+    GLNEXUS(glnexus_input, glnexus_input.map{ meta, gvcfs, tbis, custom_config -> [ meta, [] ] })
 
     // BCF -> compressed VCF (per interval, or whole genome if no intervals)
     BCFTOOLS_VIEW(GLNEXUS.out.bcf.map{ meta, bcf -> [ meta, bcf, [] ] }, [], [], [])
@@ -58,7 +59,8 @@ workflow BAM_JOINT_CALLING_GERMLINE_DEEPVARIANT {
     genotype_index = Channel.empty().mix(MERGE_GLNEXUS_VCF.out.tbi, TABIX_TABIX.out.tbi)
         .map{ meta, tbi -> [ meta - meta.subMap('num_intervals', 'intervals_name') + [ id:'joint_variant_calling', patient:'all_samples', variantcaller:'deepvariant' ], tbi ] }
 
-    versions = versions.mix(GLNEXUS.out.versions)
+    // GLNEXUS versions are reported via the `versions` topic channel (collected
+    // automatically in workflows/sarek/main.nf), not a classic versions.yml output.
     versions = versions.mix(BCFTOOLS_VIEW.out.versions)
     versions = versions.mix(MERGE_GLNEXUS_VCF.out.versions)
     versions = versions.mix(TABIX_TABIX.out.versions)
