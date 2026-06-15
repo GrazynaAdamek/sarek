@@ -248,6 +248,7 @@ workflow PIPELINE_COMPLETION {
 def validateInputParameters() {
     genomeExistsError()
     sparkAndBam()
+    jointGenotypeWithoutDeepvariant()
 }
 
 // Exit pipeline if incorrect --genome key provided
@@ -264,6 +265,13 @@ def sparkAndBam() {
         def error_string = "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" + "  The --use_gatk_spark option is not compatible with --save_mapped and --save_output_as_bam.\n" + "  If you want to save your bam files please swap to the normal gatk implementation.\n" + "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
         System.err.println(error_string)
         error(error_string)
+    }
+}
+
+// Warn (not error) so shared/default param files setting joint_genotype=true don't break runs with other --tools
+def jointGenotypeWithoutDeepvariant() {
+    if (params.joint_genotype && !(params.tools && params.tools.split(',').contains('deepvariant'))) {
+        log.warn("--joint_genotype is set but '--tools deepvariant' is not. Joint genotyping with GLnexus will not be run.")
     }
 }
 
