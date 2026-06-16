@@ -2,16 +2,21 @@
 
 ## 1. Goal
 
-Running sarek with:
+Merge per-sample DeepVariant gVCFs into a single cohort-level VCF using GLnexus.
 
+**Without annotation:**
 ```bash
 --tools deepvariant --joint_genotype
 ```
+Outputs one multi-sample VCF at `variant_calling/deepvariant/joint_variant_calling/`.
 
-(optionally with `vep` added to `--tools`) takes the per-sample DeepVariant
-gVCFs produced for a cohort and merges/genotypes them into **one multi-sample
-VCF**, which then flows through the existing annotation subworkflow to produce
-a single VEP-annotated, multi-sample VCF for the whole cohort.
+**With VEP annotation:**
+```bash
+--tools deepvariant,vep --joint_genotype
+```
+Additionally produces a VEP-annotated VCF at `annotation/vep/joint_variant_calling/`.
+`vep` must be added explicitly to `--tools`; `--joint_genotype` does not imply it
+(doing so would conflict with `--tools ...,snpeff` and fail if no VEP cache is configured).
 
 ## 2. Why GLnexus
 

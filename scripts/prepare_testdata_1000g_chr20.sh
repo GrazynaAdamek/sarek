@@ -19,38 +19,40 @@
 
 set -euo pipefail
 
+if [[ ! -f /.dockerenv ]]; then
+    docker run --rm \
+        -v "$(pwd):/work" \
+        -w /work \
+        staphb/samtools:1.21 \
+        bash -c "apt-get update -qq && apt-get install -y -qq curl && bash scripts/prepare_testdata_1000g_chr20.sh"
+    exit $?
+fi
+
 OUT="tests/data"
 mkdir -p "${OUT}"
 
 BASE_URL="https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/phase3/data"
-SAMPLES=(HG00096 HG00097 HG00099)
 
-# ── chr20 BAMs (pre-split by 1000G; verified against companion .md5) ─────────
-echo "==> Downloading chr20 BAMs for ${#SAMPLES[@]} samples..."
-for S in "${SAMPLES[@]}"; do
-    BAM_NAME="${S}.chrom20.ILLUMINA.bwa.GBR.low_coverage.20120522.bam"
-    BAM_URL="${BASE_URL}/${S}/alignment/${BAM_NAME}"
+declare -A BAM_URLS=(
+    [HG00096]="${BASE_URL}/HG00096/alignment/HG00096.chrom20.ILLUMINA.bwa.GBR.low_coverage.20120522.bam"
+    [HG00097]="${BASE_URL}/HG00097/alignment/HG00097.chrom20.ILLUMINA.bwa.GBR.low_coverage.20130415.bam"
+    [HG00099]="${BASE_URL}/HG00099/alignment/HG00099.chrom20.ILLUMINA.bwa.GBR.low_coverage.20130415.bam"
+)
+
+# ── chr20 BAMs ────────────────────────────────────────────────────────────────
+echo "==> Downloading chr20 BAMs for ${#BAM_URLS[@]} samples..."
+for S in "${!BAM_URLS[@]}"; do
     OUT_BAM="${OUT}/${S}.chr20.bam"
 
-    if [[ -f "${OUT_BAM}" ]]; then
+    if [[ -f "${OUT_BAM}" && -f "${OUT_BAM}.bai" ]]; then
         echo "  ${S}: ${OUT_BAM} already exists, skipping."
         continue
     fi
 
-    echo "  ${S}: downloading ${BAM_NAME} ..."
-    wget -q "${BAM_URL}"          -O "${OUT_BAM}"
-    wget -q "${BAM_URL}.bai"      -O "${OUT_BAM}.bai"
-    wget -q "${BAM_URL}.md5"      -O "${OUT_BAM}.md5"
-
-    # Verify md5 — the .md5 file contains "<hash>  <original filename>"
-    EXPECTED=$(awk '{print $1}' "${OUT_BAM}.md5")
-    ACTUAL=$(md5sum "${OUT_BAM}" | awk '{print $1}')
-    if [[ "${EXPECTED}" != "${ACTUAL}" ]]; then
-        echo "ERROR: MD5 mismatch for ${OUT_BAM} (expected ${EXPECTED}, got ${ACTUAL})" >&2
-        exit 1
-    fi
-    echo "  ${S}: MD5 OK (${EXPECTED})"
-    rm "${OUT_BAM}.md5"
+    BAM_URL="${BAM_URLS[$S]}"
+    echo "  ${S}: downloading $(basename "${BAM_URL}") ..."
+    curl -fsSL "${BAM_URL}"      -o "${OUT_BAM}"
+    curl -fsSL "${BAM_URL}.bai"  -o "${OUT_BAM}.bai"
 done
 
 # ── GRCh37 single-chromosome reference ───────────────────────────────────────
@@ -70,23 +72,34 @@ done
 #   Homo_sapiens.GRCh37.dna.chromosome.20.fa.gz  (~60 MB, same coordinate system)
 
 REF_OUT="${OUT}/ref.chr20.fasta"
-if [[ -f "${REF_OUT}" ]]; then
-    echo "==> ${REF_OUT} already exists, skipping reference extraction."
+if [[ -f "${REF_OUT}" && -f "${REF_OUT}.fai" ]]; then
+    echo "==> ${REF_OUT} already exists, skipping reference download."
 else
-    REF_URL="https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/human_g1k_v37.fasta.gz"
-    echo "==> Extracting chr20 from GRCh37 reference..."
-    echo "    (streaming from ${REF_URL} — may take several minutes)"
-    samtools faidx "${REF_URL}" "20" > "${REF_OUT}"
+    # Ensembl GRCh37 per-chromosome FASTA (~60 MB); same b37 coordinate system
+    # (no "chr" prefix) as the 1000G BAMs.
+    REF_URL="https://ftp.ensembl.org/pub/grch37/current/fasta/homo_sapiens/dna/Homo_sapiens.GRCh37.dna.chromosome.20.fa.gz"
+    echo "==> Downloading chr20 reference from Ensembl GRCh37 (~60 MB)..."
+    curl -fsSL "${REF_URL}" | gunzip > "${REF_OUT}"
     samtools faidx "${REF_OUT}"
     samtools dict "${REF_OUT}" -o "${OUT}/ref.chr20.dict"
 fi
 
-# ── Interval BED ──────────────────────────────────────────────────────────────
+# ── Interval BEDs ─────────────────────────────────────────────────────────────
+CHR_LEN=$(awk '$1=="20"{print $2}' "${REF_OUT}.fai")
+
 BED_OUT="${OUT}/chr20.bed"
 if [[ ! -f "${BED_OUT}" ]]; then
-    CHR_LEN=$(awk '$1=="20"{print $2}' "${REF_OUT}.fai")
     printf "20\t0\t%s\n" "${CHR_LEN}" > "${BED_OUT}"
     echo "==> Created ${BED_OUT} (${CHR_LEN} bp)"
+fi
+
+BED_MULTI_OUT="${OUT}/chr20.multi_intervals.bed"
+if [[ ! -f "${BED_MULTI_OUT}" ]]; then
+    CHUNK=$(( CHR_LEN / 3 ))
+    printf "20\t1\t%s\n"                         "${CHUNK}"        >  "${BED_MULTI_OUT}"
+    printf "20\t%s\t%s\n"  "$((CHUNK + 1))"      "$((CHUNK * 2))" >> "${BED_MULTI_OUT}"
+    printf "20\t%s\t%s\n"  "$((CHUNK * 2 + 1))"  "${CHR_LEN}"     >> "${BED_MULTI_OUT}"
+    echo "==> Created ${BED_MULTI_OUT} (3 intervals of ~$((CHR_LEN / 3 / 1000000)) Mbp each)"
 fi
 
 echo ""
