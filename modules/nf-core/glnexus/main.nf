@@ -14,9 +14,11 @@ process GLNEXUS {
     output:
     tuple val(meta), path("*.bcf"), emit: bcf
     tuple val("${task.process}"), val('glnexus'), eval("glnexus_cli 2>&1 | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+'"), topic: versions, emit: versions_glnexus
-    // --- legacy versions.yml block: redundant with versions_glnexus above
+    // LEGACY_VERSIONS_YML: redundant with versions_glnexus above
     // (topic: versions is already collected automatically), kept so this
     // module also satisfies the classic versions.yml convention.
+    // Remove together with the script/stub blocks below once upstream
+    // nf-core/modules no longer requires versions.yml.
     path "versions.yml", emit: versions
 
     when:
@@ -50,7 +52,7 @@ process GLNEXUS {
         ${input.join(' ')} \\
         > ${prefix}.bcf
 
-    # --- legacy versions.yml block (see output: above)
+    # LEGACY_VERSIONS_YML (see output block above)
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         glnexus: \$(glnexus_cli 2>&1 | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+')
@@ -62,7 +64,7 @@ process GLNEXUS {
     """
     touch ${prefix}.bcf
 
-    # --- legacy versions.yml block (see output: above)
+    # LEGACY_VERSIONS_YML (see output block above)
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         glnexus: \$(glnexus_cli 2>&1 | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+')

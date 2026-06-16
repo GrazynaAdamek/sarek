@@ -1,0 +1,186 @@
+// WHY THIS FILE IS HERE (not in modules/nf-core/glnexus/tests/)
+//
+// nf-test.config ignores 'modules/nf-core/**/tests/*' to avoid running all
+// upstream nf-core module tests in this repo's CI (they run in nf-core/modules CI).
+// However, the GLNEXUS module in this repo has been locally patched:
+//   - a new `tbis` input was added (path to .tbi index files)
+//   - a new `versions.yml` output was added
+//   - ulimit -n 65536 and rm -rf GLnexus.DB were added to the script block
+// These changes are tracked in modules/nf-core/glnexus/glnexus.diff.
+//
+// Because the module no longer matches the upstream nf-core version, its tests
+// must be maintained and executed here.  Moving the test to tests/modules/glnexus/
+// places it outside the ignore pattern so the standard runner picks it up, while
+// the ignore rule continues to protect against pulling in all other nf-core module tests.
+//
+// The "vcfs + tbis" test case was added specifically to exercise the new `tbis` input.
+// The snapshot must be regenerated after any further local module changes:
+//   NXF_SYNTAX_PARSER=v1 nf-test test tests/modules/glnexus/ \
+//       --profile debug,test,docker --update-snapshot
+
+nextflow_process {
+
+    name "Test Process GLNEXUS"
+    script "../../../modules/nf-core/glnexus/main.nf"
+    process "GLNEXUS"
+
+    tag "modules"
+    tag "modules_nfcore"
+    tag "glnexus"
+
+    test("vcfs, []") {
+
+        when {
+            process {
+                """
+                input[0] = Channel.of([
+                    [ id:'test' ],
+                    [
+                        file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/gvcf/test.genome.vcf.gz', checkIfExists: true),
+                        file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/gvcf/test2.genome.vcf.gz', checkIfExists: true),
+                    ],
+                    [],
+                    []
+                ])
+                input[1] = [[],[]]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert snapshot(process.out.bcf, process.out.versions_glnexus).match() },
+                { assert process.out.versions } // LEGACY_VERSIONS_YML
+            )
+        }
+
+    }
+
+    test("vcfs + tbis, []") {
+
+        when {
+            process {
+                """
+                input[0] = Channel.of([
+                    [ id:'test' ],
+                    [
+                        file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/gvcf/test.genome.vcf.gz', checkIfExists: true),
+                        file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/gvcf/test2.genome.vcf.gz', checkIfExists: true),
+                    ],
+                    [
+                        file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/gvcf/test.genome.vcf.gz.tbi', checkIfExists: true),
+                        file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/gvcf/test2.genome.vcf.gz.tbi', checkIfExists: true),
+                    ],
+                    []
+                ])
+                input[1] = [[],[]]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert snapshot(process.out.bcf, process.out.versions_glnexus).match() },
+                { assert process.out.versions } // LEGACY_VERSIONS_YML
+            )
+        }
+
+    }
+
+    test("vcfs, [], custom_config") {
+
+        when {
+            process {
+                """
+                input[0] = Channel.of([
+                    [ id:'test' ],
+                    [
+                        file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/gvcf/test.genome.vcf.gz', checkIfExists: true),
+                        file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/gvcf/test2.genome.vcf.gz', checkIfExists: true),
+                    ],
+                    [],
+                    file(params.modules_testdata_base_path + '/delete_me/glnexus/gatk.yml', checkIfExists: true)
+                ])
+                input[1] = [[],[]]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert snapshot(process.out.bcf, process.out.versions_glnexus).match() },
+                { assert process.out.versions } // LEGACY_VERSIONS_YML
+            )
+        }
+
+    }
+
+    test("vcfs, bed") {
+
+        when {
+            process {
+                """
+                input[0] = Channel.of([
+                    [ id:'test' ],
+                    [
+                        file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/gvcf/test.genome.vcf.gz', checkIfExists: true),
+                        file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/gvcf/test2.genome.vcf.gz', checkIfExists: true),
+                    ],
+                    [],
+                    []
+                ])
+                input[1] = [
+                    [ id:'region' ],
+                    file(params.modules_testdata_base_path + 'genomics/homo_sapiens/genome/genome.bed', checkIfExists: true),
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert snapshot(process.out.bcf, process.out.versions_glnexus).match() },
+                { assert process.out.versions } // LEGACY_VERSIONS_YML
+            )
+        }
+
+    }
+
+    test("vcfs, bed - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = Channel.of([
+                    [ id:'test' ],
+                    [
+                        file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/gvcf/test.genome.vcf.gz', checkIfExists: true),
+                        file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/gvcf/test2.genome.vcf.gz', checkIfExists: true),
+                    ],
+                    [],
+                    []
+                ])
+                input[1] = [
+                    [ id:'region' ],
+                    file(params.modules_testdata_base_path + 'genomics/homo_sapiens/genome/genome.bed', checkIfExists: true),
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert snapshot(process.out.bcf, process.out.versions_glnexus).match() },
+                { assert process.out.versions } // LEGACY_VERSIONS_YML
+            )
+        }
+
+    }
+}
