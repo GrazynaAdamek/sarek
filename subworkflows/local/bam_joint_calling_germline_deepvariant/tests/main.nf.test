@@ -106,7 +106,7 @@ nextflow_workflow {
                 // so both per-interval VCFs collapse into ONE merged output (not two).
                 // If the groupKey stripping were broken we'd get size() == 2 here.
                 { assert workflow.out.genotype_vcf.size() == 1 },
-                { assert path(workflow.out.genotype_vcf[0][1]).name == "joint_variant_calling.vcf.gz" },
+                { assert file(workflow.out.genotype_vcf[0][1]).name == "joint_variant_calling.vcf.gz" },
                 { assert workflow.out.genotype_vcf[0][0] == [id:'joint_variant_calling', patient:'all_samples', variantcaller:'deepvariant'] }
             )
         }

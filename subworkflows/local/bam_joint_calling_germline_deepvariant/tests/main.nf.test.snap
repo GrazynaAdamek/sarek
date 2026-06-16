@@ -1,0 +1,31 @@
+{
+    "deepvariant joint genotyping - no intervals": {
+        "content": [
+            [
+                [
+                    {
+                        "id": "joint_variant_calling",
+                        "patient": "all_samples",
+                        "variantcaller": "deepvariant"
+                    },
+                    "47bc52ecc4a65b8713b5933a4c2892fb"
+                ]
+            ],
+            [
+                [
+                    {
+                        "id": "joint_variant_calling",
+                        "patient": "all_samples",
+                        "variantcaller": "deepvariant"
+                    },
+                    "joint_variant_calling.vcf.gz.tbi"
+                ]
+            ]
+        ],
+        "timestamp": "2026-06-16T17:26:26.303878887",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "26.04.3"
+        }
+    }
+}
