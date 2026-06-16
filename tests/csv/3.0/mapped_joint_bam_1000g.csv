@@ -1,0 +1,4 @@
+patient,status,sample,bam,bai
+HG00096,0,HG00096,tests/data/HG00096.chr20.bam,tests/data/HG00096.chr20.bam.bai
+HG00097,0,HG00097,tests/data/HG00097.chr20.bam,tests/data/HG00097.chr20.bam.bai
+HG00099,0,HG00099,tests/data/HG00099.chr20.bam,tests/data/HG00099.chr20.bam.bai

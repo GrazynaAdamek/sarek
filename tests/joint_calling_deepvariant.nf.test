@@ -37,4 +37,34 @@ nextflow_pipeline {
     test_scenario.each { scenario ->
         test(scenario.name, UTILS.getTest(scenario))
     }
+
+    test("--joint_genotype without --tools deepvariant emits warning and does not run joint genotyping") {
+
+        options "-stub"
+
+        when {
+            params {
+                outdir         = "$outputDir"
+                input          = "${projectDir}/tests/csv/3.0/mapped_joint_bam.csv"
+                step           = 'variant_calling'
+                tools          = 'haplotypecaller'
+                joint_genotype = true
+                wes            = true
+            }
+        }
+
+        then {
+            assertAll(
+                { assert workflow.success },
+                // The pipeline must warn — not error — when joint_genotype is set
+                // without deepvariant, so configs that default joint_genotype=true
+                // don't break runs with other tools.
+                { assert (workflow.stderr + workflow.stdout).any {
+                    it.contains("--joint_genotype is set but '--tools deepvariant' is not")
+                }},
+                // Joint genotyping must be skipped: no cohort VCF in output.
+                { assert !getAllFilesFromDir(params.outdir, include: ['**/joint_variant_calling*.vcf.gz']) }
+            )
+        }
+    }
 }
