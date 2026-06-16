@@ -6,7 +6,6 @@
 |---|---|
 | [`PART1_JOINT_GENOTYPING.md`](PART1_JOINT_GENOTYPING.md) | Implementation walkthrough: GLnexus module, scatter/gather subworkflow, pipeline integration, tests, and test profiles |
 | [`PART2_CLOUD_INFRASTRUCTURE.md`](PART2_CLOUD_INFRASTRUCTURE.md) | Cloud-scale design for ~1000-sample WGS cohorts: Fusion, memory, spot interruption, work directory hygiene |
-| [`COHORT_REPORT_DESIGN.md`](COHORT_REPORT_DESIGN.md) | Design proposal for a per-sample cohort QC report (phased; not implemented) |
 | [`TECHNICAL RECRUITMENT TASK.md`](TECHNICAL%20RECRUITMENT%20TASK.md) | Original task specification |
 
 ---

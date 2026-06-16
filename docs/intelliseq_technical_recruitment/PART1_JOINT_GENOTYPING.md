@@ -269,6 +269,12 @@ Expected output: `results_jg_1000g/annotation/vep/joint_variant_calling/joint_va
 
 ---
 
+## Future addition: cohort QC report
+
+A dedicated cohort-level QC report would be a valuable addition for production use. The pipeline already runs `bcftools stats` and vcftools on the joint VCF and feeds results into MultiQC — adding `--samples -` to `bcftools stats` would immediately surface per-sample variant counts, Ti/Tv, and het/hom ratios as a sortable table in the existing MultiQC HTML (one config line change). A second phase could produce a standalone interactive HTML report (Rmarkdown/Quarto) with an allele frequency spectrum, per-sample outlier plots, and a table of clinically significant variants cross-referenced against gnomAD and ClinVar.
+
+---
+
 ## Known technical debt
 
 **Nextflow v1 → v2 syntax migration.** All commands require `NXF_SYNTAX_PARSER=v1` because Nextflow ≥ 24.x defaults to the v2 parser, which rejects v1-style constructs still present in the pipeline. The env var is a temporary compatibility shim — the pipeline needs a full syntax audit (`nf-core pipelines lint` flags most issues) before `NXF_SYNTAX_PARSER=v1` can be dropped. New code added here (GLnexus module, `BAM_JOINT_CALLING_GERMLINE_DEEPVARIANT`) is written to be v2-compatible.
