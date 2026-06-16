@@ -266,3 +266,11 @@ NXF_SYNTAX_PARSER=v1 nextflow run main.nf \
 VEP cache is read from `s3://annotation-cache/vep_cache/` by default. To use a local cache instead, pass `--vep_cache /path/to/cache`.
 
 Expected output: `results_jg_1000g/annotation/vep/joint_variant_calling/joint_variant_calling_VEP.ann.vcf.gz`
+
+---
+
+## Known technical debt
+
+**Nextflow v1 → v2 syntax migration.** All commands require `NXF_SYNTAX_PARSER=v1` because Nextflow ≥ 24.x defaults to the v2 parser, which rejects v1-style constructs still present in the pipeline. The env var is a temporary compatibility shim — the pipeline needs a full syntax audit (`nf-core pipelines lint` flags most issues) before `NXF_SYNTAX_PARSER=v1` can be dropped. New code added here (GLnexus module, `BAM_JOINT_CALLING_GERMLINE_DEEPVARIANT`) is written to be v2-compatible.
+
+**Topic-based `versions.yml`.** The pipeline mixes the classic `path "versions.yml", emit: versions` with the newer Nextflow topic channel (`emit: topic: 'versions'`). The GLnexus module emits both in parallel as a transitional measure. The long-term migration is to replace all classic emits and their `mix`/`dump_software_versions` wiring with topic-based emission — removing boilerplate from every module and subworkflow.
