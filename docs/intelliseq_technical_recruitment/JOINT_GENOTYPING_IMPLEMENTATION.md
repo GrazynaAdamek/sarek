@@ -389,24 +389,34 @@ NXF_SYNTAX_PARSER=v1 nf-test test \
 
 ### 8.3 GLNEXUS module test
 
-`modules/nf-core/glnexus/tests/main.nf.test` documents the locally-patched
-module interface.  A `vcfs + tbis, []` test case was added to exercise the new
-`tbis` input; existing cases (`vcfs, []`, `vcfs, bed`, `vcfs, [], custom_config`,
-stub) are retained unchanged.
+`tests/modules/glnexus/main.nf.test` documents the locally-patched module
+interface.  It is placed under `tests/modules/` **deliberately**, not under the
+conventional `modules/nf-core/glnexus/tests/`: `nf-test.config` ignores
+`modules/nf-core/**/tests/*` (so this repo's CI doesn't run every upstream
+nf-core module test), but the GLNEXUS module here has been locally patched
+(`tbis` input, `versions.yml` output, `ulimit`/`rm -rf GLnexus.DB` in the
+script) and therefore needs its own test that **does** run.  Locating it outside
+the ignore glob lets the standard nf-test runner pick it up while the ignore rule
+keeps protecting the other nf-core module tests.  The relocation rationale is also
+recorded in the test file's own header comment.
 
-**Important:** `nf-test.config` has `ignore 'modules/nf-core/**/tests/*'` — this
-is deliberate (nf-core module tests run upstream in nf-core/modules CI, not
-in the pipeline).  Running the module test via this repo's nf-test runner returns
-"No tests to execute".  The patched I/O (`tbis` input, `versions.yml` output) is
-validated in CI by the **subworkflow test above** and the pipeline-level test,
-which both pass real `.tbi` files to GLNEXUS and consume the `versions` channel.
+Test cases:
 
-To regenerate the module snapshot (e.g. after future module changes), temporarily
-remove the module from the ignore list, regenerate, then restore the ignore:
+| Case | Mode | Exercises |
+|---|---|---|
+| `vcfs, []` | real | baseline merge, no indexes/bed/config |
+| `vcfs + tbis, []` | real | the new `tbis` input (staged `.tbi` indexes) |
+| `vcfs, [], custom_config` | real | optional `custom_config` input |
+| `vcfs, bed` | real | optional `--bed` interval restriction |
+| `vcfs, bed - stub` | `-stub` | stub wiring |
+
+Each case asserts `process.success`, snapshots `bcf` + `versions_glnexus`, and
+checks the legacy `versions` (`versions.yml`) output.
+
+To regenerate the snapshot (e.g. after future module changes):
 
 ```bash
-# Only needed when the module interface changes
-NXF_SYNTAX_PARSER=v1 nf-test test modules/nf-core/glnexus/tests/main.nf.test \
+NXF_SYNTAX_PARSER=v1 nf-test test tests/modules/glnexus/ \
     --profile debug,test,docker --update-snapshot
 ```
 
@@ -424,6 +434,15 @@ NXF_SYNTAX_PARSER=v1 nextflow run main.nf \
     -profile test,test_joint_genotyping,docker \
     --outdir results_jg_mini
 ```
+
+**On the profile name:** the task phrases this deliverable as running with
+`-profile test,docker`.  Here that becomes `-profile test,test_joint_genotyping,docker`
+— the extra `test_joint_genotyping` profile is what turns joint genotyping on.
+This is a deliberate, additive choice: `--joint_genotype` is left **off** under the
+shared `test` profile so the existing pipeline test suite is unaffected, and the
+joint-genotyping run is layered on top via its own composable profile rather than
+mutating `test` itself.  (§8.5's `test_joint_genotyping_1000g` follows the same
+pattern for the realistic VEP-annotated run.)
 
 Expected output: `results_jg_mini/variant_calling/deepvariant/joint_variant_calling/joint_variant_calling.vcf.gz`
 
