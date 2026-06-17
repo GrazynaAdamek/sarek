@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
 # prepare_testdata_1000g_chr20.sh — download 1000 Genomes phase-3 chr20 data
-# for the joint-genotyping 1000G test profile (conf/test_joint_genotyping_1000g.config).
+# for the joint-genotyping 1000G test profiles (conf/test_joint_genotyping_1000g.config,
+# conf/test_joint_genotyping_1000g_intervals.config).
 #
 # What it produces (all under tests/data/, which is gitignored):
 #   HG00096.chr20.bam / .bai
 #   HG00097.chr20.bam / .bai
 #   HG00099.chr20.bam / .bai
 #   ref.chr20.fasta / .fai / .dict
-#   chr20.bed
+#   chr20.bed                          (full chr20, single interval)
+#   chr20.multi_intervals.bed          (3 equal full-chr20 chunks, unused by current profiles)
+#   chr20_subset.multi_intervals.bed   (3 x 500 kbp windows, used by the intervals profile)
 #
-# The 1000G FTP provides pre-split per-chromosome BAMs with companion .md5 files;
-# each chr20 BAM is ~20-50 MB.  MD5 checksums are verified after download.
+# The 1000G FTP provides pre-split per-chromosome BAMs; each chr20 BAM is ~20-50 MB.
+# No checksum verification is performed on download.
 #
 # Requirements: docker, internet access.
 #
@@ -18,7 +21,7 @@
 #   bash scripts/prepare_testdata_1000g_chr20.sh [--vep DIR]
 #
 # Options:
-#   --vep DIR   Also download the VEP cache (homo_sapiens GRCh37 v110, ~15 GB) to DIR.
+#   --vep DIR   Also download the VEP cache (homo_sapiens GRCh37 v115, ~15 GB) to DIR.
 #               Pass the same DIR as --vep_cache when running the pipeline.
 
 set -euo pipefail
@@ -149,12 +152,14 @@ echo ""
 echo "==> Done. Test data written to ${OUT}/:"
 ls -lh "${OUT}/"
 echo ""
-echo "Run the pipeline with:"
+echo "Joint genotyping module only (no VEP):"
 echo "  NXF_SYNTAX_PARSER=v1 nextflow run main.nf \\"
 echo "      -profile test,test_joint_genotyping_1000g,docker \\"
 echo "      --outdir results_jg_1000g"
 echo ""
-echo "Or the fast subset (scatter/gather over 5 Mbp of chr20):"
+echo "Full end-to-end incl. VEP (scatter/gather over 1.5 Mbp of chr20; requires a VEP cache,"
+echo "download one with: bash scripts/prepare_testdata_1000g_chr20.sh --vep /path/to/vep_cache):"
 echo "  NXF_SYNTAX_PARSER=v1 nextflow run main.nf \\"
 echo "      -profile test,test_joint_genotyping_1000g_intervals,docker \\"
+echo "      --vep_cache /path/to/vep_cache \\"
 echo "      --outdir results_jg_1000g_intervals"

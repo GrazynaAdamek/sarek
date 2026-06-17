@@ -253,7 +253,7 @@ Demonstrates the full deliverable with real WGS alignments. Test data is **not c
 Real-life complement to the mini-genome profile above: same pipeline path, but on real WGS data, so runtime is longer (minutes vs. seconds) and disk usage is higher (BAMs + reference + VEP cache vs. a few KB).
 
 ```bash
-bash scripts/prepare_testdata_1000g_chr20.sh   # ~1.4 GB download, requires samtools
+bash scripts/prepare_testdata_1000g_chr20.sh   # ~1.4 GB download, requires docker
 ```
 
 **Profile choice**
