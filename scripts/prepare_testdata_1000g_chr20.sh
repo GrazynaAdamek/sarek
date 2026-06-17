@@ -49,7 +49,7 @@ if [[ ! -f /.dockerenv ]]; then
 
     if [[ -n "$VEP_CACHE_DIR" ]]; then
         mkdir -p "$VEP_CACHE_DIR"
-        echo "==> Downloading VEP cache (homo_sapiens GRCh37 v110) to ${VEP_CACHE_DIR} (~15 GB, may take a while)..."
+        echo "==> Downloading VEP cache (homo_sapiens GRCh37 v115) to ${VEP_CACHE_DIR} (~15 GB, may take a while)..."
         docker run --rm \
             -v "${VEP_CACHE_DIR}:/cache" \
             community.wave.seqera.io/library/ensembl-vep_perl-math-cdf:1e13f65f931a6954 \
@@ -125,28 +125,26 @@ fi
 # ── Interval BEDs ─────────────────────────────────────────────────────────────
 CHR_LEN=$(awk '$1=="20"{print $2}' "${REF_OUT}.fai")
 
-BED_OUT="${OUT}/chr20.bed"
-if [[ ! -f "${BED_OUT}" ]]; then
-    printf "20\t0\t%s\n" "${CHR_LEN}" > "${BED_OUT}"
-    echo "==> Created ${BED_OUT} (${CHR_LEN} bp)"
-fi
+write_bed_if_missing() {
+    local file="$1" desc="$2" content="$3"
+    if [[ -f "${file}" ]]; then
+        echo "==> ${file} already exists, skipping."
+        return
+    fi
+    printf '%s\n' "${content}" > "${file}"
+    echo "==> Created ${file} (${desc})"
+}
 
-BED_MULTI_OUT="${OUT}/chr20.multi_intervals.bed"
-if [[ ! -f "${BED_MULTI_OUT}" ]]; then
-    CHUNK=$(( CHR_LEN / 3 ))
-    printf "20\t1\t%s\n"                         "${CHUNK}"        >  "${BED_MULTI_OUT}"
-    printf "20\t%s\t%s\n"  "$((CHUNK + 1))"      "$((CHUNK * 2))" >> "${BED_MULTI_OUT}"
-    printf "20\t%s\t%s\n"  "$((CHUNK * 2 + 1))"  "${CHR_LEN}"     >> "${BED_MULTI_OUT}"
-    echo "==> Created ${BED_MULTI_OUT} (3 intervals of ~$((CHR_LEN / 3 / 1000000)) Mbp each)"
-fi
+write_bed_if_missing "${OUT}/chr20.bed" "${CHR_LEN} bp" \
+    "$(printf '20\t0\t%s\n' "${CHR_LEN}")"
 
-BED_SUBSET_MULTI_OUT="${OUT}/chr20_subset.multi_intervals.bed"
-if [[ ! -f "${BED_SUBSET_MULTI_OUT}" ]]; then
-    printf "20\t10000000\t10500000\n" >  "${BED_SUBSET_MULTI_OUT}"
-    printf "20\t30000000\t30500000\n" >> "${BED_SUBSET_MULTI_OUT}"
-    printf "20\t55000000\t55500000\n" >> "${BED_SUBSET_MULTI_OUT}"
-    echo "==> Created ${BED_SUBSET_MULTI_OUT} (3 × 500 kbp regions spread across chr20)"
-fi
+CHUNK=$(( CHR_LEN / 3 ))
+write_bed_if_missing "${OUT}/chr20.multi_intervals.bed" "3 intervals of ~$((CHR_LEN / 3 / 1000000)) Mbp each" \
+    "$(printf '20\t1\t%s\n20\t%s\t%s\n20\t%s\t%s\n' \
+        "${CHUNK}" "$((CHUNK + 1))" "$((CHUNK * 2))" "$((CHUNK * 2 + 1))" "${CHR_LEN}")"
+
+write_bed_if_missing "${OUT}/chr20_subset.multi_intervals.bed" "3 × 500 kbp regions spread across chr20" \
+    "$(printf '20\t10000000\t10500000\n20\t30000000\t30500000\n20\t55000000\t55500000\n')"
 
 echo ""
 echo "==> Done. Test data written to ${OUT}/:"
