@@ -244,28 +244,43 @@ NXF_SYNTAX_PARSER=v1 nextflow run main.nf \
 
 Expected output: `results_jg_mini/variant_calling/deepvariant/joint_variant_calling/joint_variant_calling.vcf.gz`
 
-### Realistic 1000 Genomes profile (3 samples, chr20, with VEP)
+### Realistic 1000 Genomes profiles (3 samples, chr20, with VEP)
 
-**File:** [`conf/test_joint_genotyping_1000g.config`](../../conf/test_joint_genotyping_1000g.config)
 **Data script:** [`scripts/prepare_testdata_1000g_chr20.sh`](../../scripts/prepare_testdata_1000g_chr20.sh)
 
-Demonstrates the full deliverable: VEP-annotated multi-sample VCF from real WGS alignments. Test data is **not committed** to the repository — the script downloads and subsets 1000 Genomes phase-3 chr20 BAMs for three GBR individuals (HG00096, HG00097, HG00099).
+Demonstrates the full deliverable with real WGS alignments. Test data is **not committed** to the repository — the script downloads 1000 Genomes phase-3 chr20 BAMs for three GBR individuals (HG00096, HG00097, HG00099) and creates the required interval BED files.
 
-**Chr20 rationale:** mid-sized (~63 Mb in GRCh37), gene-rich enough to produce real variants for VEP to annotate, and small enough (~20–50 MB per sample after subsetting) to keep the test tractable without dedicated data infrastructure.
+Real-life complement to the mini-genome profile above: same pipeline path, but on real WGS data, so runtime is longer (minutes vs. seconds) and disk usage is higher (BAMs + reference + VEP cache vs. a few KB).
 
 ```bash
-# Step 1: generate test data (requires samtools, ~2 GB download)
-bash scripts/prepare_testdata_1000g_chr20.sh
+bash scripts/prepare_testdata_1000g_chr20.sh   # ~1.4 GB download, requires samtools
+```
 
-# Step 2: run the pipeline
+**Profile choice**
+
+| Profile | Interval coverage | VEP | Purpose |
+|---|---|---|---|
+| `test_joint_genotyping_1000g` | Full chr20 (63 Mbp) | no | Validates DeepVariant + GLnexus joint genotyping on real WGS data |
+| `test_joint_genotyping_1000g_intervals` | 3 × 500 kbp | yes (requires `--vep_cache`) | Full end-to-end: scatter/gather + joint genotyping + VEP annotation |
+
+**Chr20 rationale:** mid-sized (~63 Mb in GRCh37), gene-rich enough to produce real variants for VEP to annotate, and available as pre-split per-chromosome BAMs from the 1000G FTP without downloading full-genome alignments.
+
+```bash
+# Joint genotyping module (no VEP):
 NXF_SYNTAX_PARSER=v1 nextflow run main.nf \
     -profile test,test_joint_genotyping_1000g,docker \
     --outdir results_jg_1000g
+
+# Full end-to-end including VEP (requires local cache):
+NXF_SYNTAX_PARSER=v1 nextflow run main.nf \
+    -profile test,test_joint_genotyping_1000g_intervals,docker \
+    --vep_cache /path/to/vep_cache \
+    --outdir results_jg_1000g_intervals
 ```
 
-VEP cache is read from `s3://annotation-cache/vep_cache/` by default. To use a local cache instead, pass `--vep_cache /path/to/cache`.
-
-Expected output: `results_jg_1000g/annotation/vep/joint_variant_calling/joint_variant_calling_VEP.ann.vcf.gz`
+Expected outputs:
+- Joint VCF: `results_jg_1000g/variant_calling/deepvariant/joint_variant_calling/joint_variant_calling.vcf.gz`
+- VEP annotation: `results_jg_1000g_intervals/annotation/vep/joint_variant_calling/joint_variant_calling_VEP.ann.vcf.gz`
 
 ---
 

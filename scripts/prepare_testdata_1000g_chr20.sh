@@ -12,12 +12,30 @@
 # The 1000G FTP provides pre-split per-chromosome BAMs with companion .md5 files;
 # each chr20 BAM is ~20-50 MB.  MD5 checksums are verified after download.
 #
-# Requirements: wget, samtools (≥1.15), internet access.
+# Requirements: docker, internet access.
 #
 # Usage:
-#   bash scripts/prepare_testdata_1000g_chr20.sh
+#   bash scripts/prepare_testdata_1000g_chr20.sh [--vep DIR]
+#
+# Options:
+#   --vep DIR   Also download the VEP cache (homo_sapiens GRCh37 v110, ~15 GB) to DIR.
+#               Pass the same DIR as --vep_cache when running the pipeline.
 
 set -euo pipefail
+
+# ── Argument parsing ───────────────────────────────────────────────────────────
+VEP_CACHE_DIR=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --vep)
+            [[ $# -ge 2 ]] || { echo "ERROR: --vep requires a directory argument" >&2; exit 1; }
+            VEP_CACHE_DIR="$2"; shift 2 ;;
+        --vep=*)
+            VEP_CACHE_DIR="${1#--vep=}"; shift ;;
+        *)
+            echo "Unknown argument: $1" >&2; exit 1 ;;
+    esac
+done
 
 if [[ ! -f /.dockerenv ]]; then
     docker run --rm \
@@ -25,7 +43,24 @@ if [[ ! -f /.dockerenv ]]; then
         -w /work \
         staphb/samtools:1.21 \
         bash -c "apt-get update -qq && apt-get install -y -qq curl && bash scripts/prepare_testdata_1000g_chr20.sh"
-    exit $?
+
+    if [[ -n "$VEP_CACHE_DIR" ]]; then
+        mkdir -p "$VEP_CACHE_DIR"
+        echo "==> Downloading VEP cache (homo_sapiens GRCh37 v110) to ${VEP_CACHE_DIR} (~15 GB, may take a while)..."
+        docker run --rm \
+            -v "${VEP_CACHE_DIR}:/cache" \
+            community.wave.seqera.io/library/ensembl-vep_perl-math-cdf:1e13f65f931a6954 \
+            vep_install \
+                --AUTO cf \
+                --SPECIES homo_sapiens \
+                --ASSEMBLY GRCh37 \
+                --CACHE_VERSION 115 \
+                --CACHEDIR /cache \
+                --NO_UPDATE \
+                --NO_HTSLIB
+        echo "==> VEP cache written to ${VEP_CACHE_DIR}"
+    fi
+    exit 0
 fi
 
 OUT="tests/data"
@@ -102,6 +137,14 @@ if [[ ! -f "${BED_MULTI_OUT}" ]]; then
     echo "==> Created ${BED_MULTI_OUT} (3 intervals of ~$((CHR_LEN / 3 / 1000000)) Mbp each)"
 fi
 
+BED_SUBSET_MULTI_OUT="${OUT}/chr20_subset.multi_intervals.bed"
+if [[ ! -f "${BED_SUBSET_MULTI_OUT}" ]]; then
+    printf "20\t10000000\t10500000\n" >  "${BED_SUBSET_MULTI_OUT}"
+    printf "20\t30000000\t30500000\n" >> "${BED_SUBSET_MULTI_OUT}"
+    printf "20\t55000000\t55500000\n" >> "${BED_SUBSET_MULTI_OUT}"
+    echo "==> Created ${BED_SUBSET_MULTI_OUT} (3 × 500 kbp regions spread across chr20)"
+fi
+
 echo ""
 echo "==> Done. Test data written to ${OUT}/:"
 ls -lh "${OUT}/"
@@ -110,3 +153,8 @@ echo "Run the pipeline with:"
 echo "  NXF_SYNTAX_PARSER=v1 nextflow run main.nf \\"
 echo "      -profile test,test_joint_genotyping_1000g,docker \\"
 echo "      --outdir results_jg_1000g"
+echo ""
+echo "Or the fast subset (scatter/gather over 5 Mbp of chr20):"
+echo "  NXF_SYNTAX_PARSER=v1 nextflow run main.nf \\"
+echo "      -profile test,test_joint_genotyping_1000g_intervals,docker \\"
+echo "      --outdir results_jg_1000g_intervals"

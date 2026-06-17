@@ -69,18 +69,34 @@ NXF_SYNTAX_PARSER=v1 nextflow run main.nf \
 
 Expected output: `results_jg_mini/variant_calling/deepvariant/joint_variant_calling/joint_variant_calling.vcf.gz`
 
-### 5. End-to-end run — realistic 1000 Genomes profile (3 samples, chr20, VEP)
+### 5. End-to-end run — 1000 Genomes profiles (3 samples, real WGS data)
+
+Real-life complement to the mini-genome profile above: same pipeline path, but on real WGS data, so runtime is longer (minutes vs. seconds) and disk usage is higher (BAMs + reference + VEP cache vs. a few KB).
+
+Prepare test data once (downloads ~1.4 GB chr20 BAMs and reference):
 
 ```bash
-# Step 1: download and subset test data (~2 GB, requires samtools)
 bash scripts/prepare_testdata_1000g_chr20.sh
+```
 
-# Step 2: run the pipeline
+Two profiles with distinct purposes:
+
+| Profile | Tests | VEP |
+|---|---|---|
+| `test_joint_genotyping_1000g` | DeepVariant + GLnexus joint genotyping on full chr20 | no |
+| `test_joint_genotyping_1000g_intervals` | Scatter/gather (3 intervals) + joint genotyping + annotation | yes — requires `--vep_cache` |
+
+```bash
+# Joint genotyping module (no VEP):
 NXF_SYNTAX_PARSER=v1 nextflow run main.nf \
     -profile test,test_joint_genotyping_1000g,docker \
     --outdir results_jg_1000g
+
+# Full end-to-end including VEP — download the cache once, then pass --vep_cache:
+bash scripts/prepare_testdata_1000g_chr20.sh --vep /path/to/vep_cache
+
+NXF_SYNTAX_PARSER=v1 nextflow run main.nf \
+    -profile test,test_joint_genotyping_1000g_intervals,docker \
+    --vep_cache /path/to/vep_cache \
+    --outdir results_jg_1000g_intervals
 ```
-
-Expected output: `results_jg_1000g/annotation/vep/joint_variant_calling/joint_variant_calling_VEP.ann.vcf.gz`
-
-VEP cache is read from `s3://annotation-cache/vep_cache/` by default. To use a local cache, pass `--vep_cache /path/to/cache`.
