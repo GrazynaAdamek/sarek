@@ -40,13 +40,7 @@ NXF_SYNTAX_PARSER=v1 nf-test test tests/modules/glnexus/ \
 
 ### 2. Subworkflow test
 
-First pass creates the snapshot; second pass confirms determinism:
-
 ```bash
-NXF_SYNTAX_PARSER=v1 nf-test test \
-    subworkflows/local/bam_joint_calling_germline_deepvariant/tests/main.nf.test \
-    --profile debug,test,docker --update-snapshot
-
 NXF_SYNTAX_PARSER=v1 nf-test test \
     subworkflows/local/bam_joint_calling_germline_deepvariant/tests/main.nf.test \
     --profile debug,test,docker
