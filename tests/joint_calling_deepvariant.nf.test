@@ -42,7 +42,7 @@ nextflow_pipeline {
         test(scenario.name, UTILS.getTest(scenario))
     }
 
-    test("--joint_genotype without --tools deepvariant emits warning and does not run joint genotyping") {
+    test("Should skip joint genotyping and not error when --joint_genotype is set without --tools deepvariant") {
 
         options "-stub"
 

@@ -28,7 +28,7 @@ nextflow_process {
     tag "modules_nfcore"
     tag "glnexus"
 
-    test("vcfs, []") {
+    test("Should run GLnexus with VCFs and no TBI indices") {
 
         when {
             process {
@@ -57,7 +57,7 @@ nextflow_process {
 
     }
 
-    test("vcfs + tbis, []") {
+    test("Should run GLnexus with VCFs and TBI indices") {
 
         when {
             process {
@@ -89,7 +89,7 @@ nextflow_process {
 
     }
 
-    test("vcfs, [], custom_config") {
+    test("Should run GLnexus with a custom config") {
 
         when {
             process {
@@ -118,7 +118,7 @@ nextflow_process {
 
     }
 
-    test("vcfs, bed") {
+    test("Should run GLnexus with a BED region file") {
 
         when {
             process {
@@ -150,7 +150,7 @@ nextflow_process {
 
     }
 
-    test("vcfs, bed - stub") {
+    test("Should run GLnexus with a BED region file (stub)") {
 
         options "-stub"
 

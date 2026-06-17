@@ -1,5 +1,5 @@
 {
-    "deepvariant joint genotyping - no intervals": {
+    "Should run DeepVariant joint genotyping without intervals": {
         "content": [
             [
                 [

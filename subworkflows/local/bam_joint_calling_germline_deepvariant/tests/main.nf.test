@@ -9,7 +9,7 @@ nextflow_workflow {
     tag "subworkflows_local"
     tag "bam_joint_calling_germline_deepvariant"
 
-    test("deepvariant joint genotyping - no intervals") {
+    test("Should run DeepVariant joint genotyping without intervals") {
 
         when {
             workflow {
@@ -55,7 +55,7 @@ nextflow_workflow {
         }
     }
 
-    test("deepvariant joint genotyping - multiple intervals - stub") {
+    test("Should run DeepVariant joint genotyping with multiple intervals (stub)") {
 
         options "-stub"
 

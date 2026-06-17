@@ -172,11 +172,11 @@ Based on the upstream nf-core module test, relocated to `tests/modules/` so it i
 
 | Case | Mode | What it exercises |
 |---|---|---|
-| `vcfs, []` | real | baseline merge without indexes, bed, or custom config |
-| `vcfs + tbis, []` | real | the new `tbis` input (staged `.tbi` indexes) |
-| `vcfs, [], custom_config` | real | optional `custom_config` input |
-| `vcfs, bed` | real | optional `--bed` interval restriction |
-| `vcfs, bed - stub` | `-stub` | stub wiring |
+| Should run GLnexus with VCFs and no TBI indices | real | baseline merge without indexes, bed, or custom config |
+| Should run GLnexus with VCFs and TBI indices | real | the new `tbis` input (staged `.tbi` indexes) |
+| Should run GLnexus with a custom config | real | optional `custom_config` input |
+| Should run GLnexus with a BED region file | real | optional `--bed` interval restriction |
+| Should run GLnexus with a BED region file (stub) | `-stub` | stub wiring |
 
 Each case asserts `process.success`, snapshots `bcf` + `versions_glnexus`, and checks the legacy `versions` (`versions.yml`) output.
 

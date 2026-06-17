@@ -56,7 +56,7 @@ NXF_SYNTAX_PARSER=v1 nf-test test \
 
 ```bash
 NXF_SYNTAX_PARSER=v1 nf-test test tests/joint_calling_deepvariant.nf.test \
-    --profile debug,test,docker --verbose
+    --profile debug,test,docker
 ```
 
 ### 4. End-to-end run — mini-genome profile

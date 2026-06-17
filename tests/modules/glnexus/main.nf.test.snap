@@ -1,5 +1,5 @@
 {
-    "vcfs, bed - stub": {
+    "Should run GLnexus with a BED region file (stub)": {
         "content": [
             [
                 [
@@ -23,7 +23,7 @@
             "nextflow": "26.04.3"
         }
     },
-    "vcfs, [], custom_config": {
+    "Should run GLnexus with a custom config": {
         "content": [
             [
                 [
@@ -47,7 +47,7 @@
             "nextflow": "26.04.3"
         }
     },
-    "vcfs, bed": {
+    "Should run GLnexus with a BED region file": {
         "content": [
             [
                 [
@@ -71,7 +71,7 @@
             "nextflow": "26.04.3"
         }
     },
-    "vcfs, []": {
+    "Should run GLnexus with VCFs and no TBI indices": {
         "content": [
             [
                 [
@@ -95,7 +95,7 @@
             "nextflow": "26.04.3"
         }
     },
-    "vcfs + tbis, []": {
+    "Should run GLnexus with VCFs and TBI indices": {
         "content": [
             [
                 [
