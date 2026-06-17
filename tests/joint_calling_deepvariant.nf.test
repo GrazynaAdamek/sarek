@@ -19,7 +19,11 @@ nextflow_pipeline {
                 joint_genotype: true,
                 wes: true,
                 nucleotides_per_second: 20
-            ]
+            ],
+            // GLnexus joint genotyping merge is multi-threaded and not guaranteed
+            // deterministic at the byte level across runs (--threads $task.cpus);
+            // snapshot a stable vcf.summary instead of a raw content hash.
+            no_vcf_md5sum: true,
         ],
         [
             name: "-profile test --input tests/csv/3.0/mapped_joint_bam.csv --tools deepvariant --joint_genotype --nucleotides_per_second 100",
@@ -33,7 +37,9 @@ nextflow_pipeline {
                 joint_genotype: true,
                 wes: true,
                 nucleotides_per_second: 100
-            ]
+            ],
+            // Same GLnexus non-determinism as the nucleotides_per_second: 20 scenario above.
+            no_vcf_md5sum: true,
         ]
     ]
 

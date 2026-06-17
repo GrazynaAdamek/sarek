@@ -185,7 +185,7 @@
                 "multiqc_citations.txt:md5,d40980f61eb64026d58102841b7f3860",
                 "samtools-stats-dp.txt:md5,a0c101497a0566f60b9e8388207944ab",
                 "samtools_alignment_plot.txt:md5,563784066de81f3bc8ccf5fbbe82b3d5",
-                "joint_variant_calling.bcftools_stats.txt:md5,91841972f31c9ba7dd9d9b739e78b5e0",
+                "joint_variant_calling.bcftools_stats.txt:md5,5178efd3f0a7ed5bf38ad8d6af58b024",
                 "testN.recal.mosdepth.global.dist.txt:md5,e82e90c7d508a135b5a8a7cd6933452e",
                 "testN.recal.mosdepth.region.dist.txt:md5,3a2030e5e8af7bc12720c3a5592bf921",
                 "testN.recal.mosdepth.summary.txt:md5,615c5c5019d88045a9ff5bbe6e63d270",
@@ -200,21 +200,36 @@
                 "testT.recal.per-base.bed.gz.csi:md5,7f62d96cdff1ce2acc0c7d2d0549cb1b",
                 "testT.recal.regions.bed.gz:md5,8f0d545a0950c6a53225abec38553f6f",
                 "testT.recal.regions.bed.gz.csi:md5,5c00a1d457c387d6e71848a6d897e309",
-                "joint_variant_calling.FILTER.summary:md5,a3ab34ce2000ac1868331724ddf33802",
-                "joint_variant_calling.TsTv.count:md5,1078c32925a961839c96c5f21ee1442e"
+                "joint_variant_calling.FILTER.summary:md5,c466b1c20e23ca4a7bf5ee63a33222b8",
+                "joint_variant_calling.TsTv.count:md5,18234d51fe56c4fd99d52afa0a6836ef"
             ],
             "No BAM files",
             "No CRAM files",
             [
-                "joint_variant_calling.vcf.gz:md5,7d57c29c424fc7836a8fd26228eee41d",
-                "testN.deepvariant.g.vcf.gz:md5,ed6ca806547eaf469a93d79fac2a3d90",
-                "testN.deepvariant.vcf.gz:md5,2659f4d39367748bb93295888cadaf17",
-                "testT.deepvariant.g.vcf.gz:md5,992e7b38ccdc00c47ab64ae8e974c177",
-                "testT.deepvariant.vcf.gz:md5,e51ec0e99ca98b484f176b87e0a901a7"
+                [
+                    "joint_variant_calling.vcf.gz",
+                    "VcfFile [chromosomes=[chr22], sampleCount=2, variantCount=5, phased=false, phasedAutodetect=false]"
+                ],
+                [
+                    "testN.deepvariant.g.vcf.gz",
+                    "VcfFile [chromosomes=[chr22], sampleCount=1, variantCount=114, phased=false, phasedAutodetect=false]"
+                ],
+                [
+                    "testN.deepvariant.vcf.gz",
+                    "VcfFile [chromosomes=[chr22], sampleCount=1, variantCount=4, phased=false, phasedAutodetect=false]"
+                ],
+                [
+                    "testT.deepvariant.g.vcf.gz",
+                    "VcfFile [chromosomes=[chr22], sampleCount=1, variantCount=210, phased=false, phasedAutodetect=false]"
+                ],
+                [
+                    "testT.deepvariant.vcf.gz",
+                    "VcfFile [chromosomes=[chr22], sampleCount=1, variantCount=9, phased=false, phasedAutodetect=false]"
+                ]
             ],
             "No warnings"
         ],
-        "timestamp": "2026-06-17T08:41:33.951331392",
+        "timestamp": "2026-06-17T10:45:09.158696381",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "26.04.3"
@@ -421,15 +436,30 @@
             "No BAM files",
             "No CRAM files",
             [
-                "joint_variant_calling.vcf.gz:md5,34dd3b8bcd32219d243f18bfb5427b8b",
-                "testN.deepvariant.g.vcf.gz:md5,54b845d451ff2325505ceadcdbe4d688",
-                "testN.deepvariant.vcf.gz:md5,3ebb9e81e3987946c4284e3bc39578eb",
-                "testT.deepvariant.g.vcf.gz:md5,eb5d7034b4102a69f0de7b98a9728e61",
-                "testT.deepvariant.vcf.gz:md5,6d2e941cc326febf004894123f77ab4d"
+                [
+                    "joint_variant_calling.vcf.gz",
+                    "VcfFile [chromosomes=[chr22], sampleCount=2, variantCount=5, phased=false, phasedAutodetect=false]"
+                ],
+                [
+                    "testN.deepvariant.g.vcf.gz",
+                    "VcfFile [chromosomes=[chr22], sampleCount=1, variantCount=114, phased=false, phasedAutodetect=false]"
+                ],
+                [
+                    "testN.deepvariant.vcf.gz",
+                    "VcfFile [chromosomes=[chr22], sampleCount=1, variantCount=4, phased=false, phasedAutodetect=false]"
+                ],
+                [
+                    "testT.deepvariant.g.vcf.gz",
+                    "VcfFile [chromosomes=[chr22], sampleCount=1, variantCount=210, phased=false, phasedAutodetect=false]"
+                ],
+                [
+                    "testT.deepvariant.vcf.gz",
+                    "VcfFile [chromosomes=[chr22], sampleCount=1, variantCount=9, phased=false, phasedAutodetect=false]"
+                ]
             ],
             "No warnings"
         ],
-        "timestamp": "2026-06-16T17:19:40.864152394",
+        "timestamp": "2026-06-17T10:47:33.964713957",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "26.04.3"

@@ -61,22 +61,10 @@ workflow BAM_VARIANT_CALLING_DEEPVARIANT {
         no_intervals: it[0].num_intervals <= 1
     }
 
-    // Figuring out if there is one or more gvcf index(es) from the same sample
-    gvcf_tbi_out = DEEPVARIANT_RUNDEEPVARIANT.out.gvcf_index.branch{
-        // Use meta.num_intervals to asses number of intervals
-        intervals:    it[0].num_intervals > 1
-        no_intervals: it[0].num_intervals <= 1
-    }
-
     // Mix intervals and no_intervals channels together
     gvcf = Channel.empty().mix(MERGE_DEEPVARIANT_GVCF.out.vcf, gvcf_out.no_intervals)
         // add variantcaller to meta map and remove no longer necessary field: num_intervals
         .map{ meta, vcf -> [ meta - meta.subMap('num_intervals') + [ variantcaller:'deepvariant' ], vcf ] }
-
-    // Mix intervals and no_intervals channels together
-    gvcf_tbi = Channel.empty().mix(MERGE_DEEPVARIANT_GVCF.out.tbi, gvcf_tbi_out.no_intervals)
-        // add variantcaller to meta map and remove no longer necessary field: num_intervals
-        .map{ meta, tbi -> [ meta - meta.subMap('num_intervals') + [ variantcaller:'deepvariant' ], tbi ] }
 
     // Mix intervals and no_intervals channels together
     vcf = Channel.empty().mix(MERGE_DEEPVARIANT_VCF.out.vcf, vcf_out.no_intervals)
@@ -93,7 +81,6 @@ workflow BAM_VARIANT_CALLING_DEEPVARIANT {
 
     emit:
     gvcf
-    gvcf_tbi
     gvcf_tbi_intervals
     vcf
     tbi
