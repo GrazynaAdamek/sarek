@@ -12,7 +12,7 @@ Outputs one multi-sample VCF at `variant_calling/deepvariant/joint_variant_calli
 ```bash
 --tools deepvariant,vep --joint_genotype
 ```
-Additionally produces a VEP-annotated VCF at `annotation/vep/joint_variant_calling/`.
+Additionally produces a VEP-annotated VCF at `annotation/deepvariant/joint_variant_calling/`.
 `vep` must be added explicitly to `--tools`; `--joint_genotype` does not imply it
 (doing so would conflict with `--tools ...,snpeff` and fail if no VEP cache is configured).
 
@@ -45,7 +45,7 @@ per-sample CRAM ──► DEEPVARIANT_RUNDEEPVARIANT (scatter per interval)
                   POST_VARIANTCALLING ──► VCF_ANNOTATE_ALL (VEP)
                           │
                           ▼
-        annotation/vep/joint_variant_calling/joint_variant_calling_VEP.ann.vcf.gz
+        annotation/deepvariant/joint_variant_calling/joint_variant_calling_VEP.ann.vcf.gz
 ```
 
 ---
@@ -157,7 +157,7 @@ Because Deliverable 3 replaces `vcf_deepvariant` upstream of `vcf_all`, the join
 |---|---|
 | `--tools deepvariant` | unchanged: N per-sample VCFs |
 | `--tools deepvariant --joint_genotype` | one multi-sample VCF at `variant_calling/deepvariant/joint_variant_calling/joint_variant_calling.vcf.gz` |
-| `--tools deepvariant,vep --joint_genotype` | additionally, one VEP-annotated multi-sample VCF at `annotation/vep/joint_variant_calling/joint_variant_calling_VEP.ann.vcf.gz` |
+| `--tools deepvariant,vep --joint_genotype` | additionally, one VEP-annotated multi-sample VCF at `annotation/deepvariant/joint_variant_calling/joint_variant_calling_VEP.ann.vcf.gz` |
 | `--joint_genotype` without `deepvariant` in `--tools` | warning logged, flag has no effect |
 
 ---
@@ -280,7 +280,7 @@ NXF_SYNTAX_PARSER=v1 nextflow run main.nf \
 
 Expected outputs:
 - Joint VCF: `results_jg_1000g/variant_calling/deepvariant/joint_variant_calling/joint_variant_calling.vcf.gz`
-- VEP annotation: `results_jg_1000g_intervals/annotation/vep/joint_variant_calling/joint_variant_calling_VEP.ann.vcf.gz`
+- VEP annotation: `results_jg_1000g_intervals/annotation/deepvariant/joint_variant_calling/joint_variant_calling_VEP.ann.vcf.gz`
 
 ---
 

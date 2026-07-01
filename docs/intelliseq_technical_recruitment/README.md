@@ -27,7 +27,7 @@ Add `--joint_genotype` to any existing DeepVariant run:
 ```
 
 Output: `variant_calling/deepvariant/joint_variant_calling/joint_variant_calling.vcf.gz`
-Annotated: `annotation/vep/joint_variant_calling/joint_variant_calling_VEP.ann.vcf.gz`
+Annotated: `annotation/deepvariant/joint_variant_calling/joint_variant_calling_VEP.ann.vcf.gz`
 
 ---
 
