@@ -1,0 +1,77 @@
+nextflow_workflow {
+
+    name "Test Subworkflow BAM_VARIANT_CALLING_DEEPVARIANT"
+    script "../main.nf"
+    workflow "BAM_VARIANT_CALLING_DEEPVARIANT"
+    config "./nextflow.config"
+
+    tag "subworkflows"
+    tag "subworkflows_local"
+    tag "bam_variant_calling_deepvariant"
+
+    test("Should keep each per-sample gVCF paired with its own interval when scattered (stub)") {
+
+        options "-stub"
+
+        when {
+            workflow {
+                """
+                // Two samples scattered across two intervals each (num_intervals = 2).
+                // Regression test for a bug where gvcf_tbi_intervals could re-attach the
+                // WRONG interval to a gVCF: cram.combine(intervals) only tagged meta with
+                // num_intervals (the same for every shard of one sample), so the later
+                // .join(cram_intervals) keyed on meta could pair a gVCF with a mismatched
+                // interval whenever parallel DeepVariant tasks completed out of submission
+                // order. The fix folds intervals_name into meta up front so the join key
+                // is unique per (sample, interval) and can no longer mis-pair.
+                cram = Channel.of(
+                    [ [ id:'sample1' ], file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/cram/test.paired_end.recalibrated.sorted.cram', checkIfExists: true), file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/cram/test.paired_end.recalibrated.sorted.cram.crai', checkIfExists: true) ],
+                    [ [ id:'sample2' ], file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/cram/test2.paired_end.recalibrated.sorted.cram', checkIfExists: true), file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/cram/test2.paired_end.recalibrated.sorted.cram.crai', checkIfExists: true) ]
+                )
+                // .collect() turns these into value channels so they're broadcast to
+                // every DEEPVARIANT_RUNDEEPVARIANT / MERGE_DEEPVARIANT_* invocation,
+                // instead of being consumed once and starving the rest.
+                dict = Channel.of([
+                    [ id:'genome' ],
+                    file(params.modules_testdata_base_path + 'genomics/homo_sapiens/genome/genome.dict', checkIfExists: true)
+                ]).collect()
+                fasta = Channel.of([
+                    [ id:'genome' ],
+                    file(params.modules_testdata_base_path + 'genomics/homo_sapiens/genome/genome.fasta', checkIfExists: true)
+                ]).collect()
+                fasta_fai = Channel.of([
+                    [ id:'genome' ],
+                    file(params.modules_testdata_base_path + 'genomics/homo_sapiens/genome/genome.fasta.fai', checkIfExists: true)
+                ]).collect()
+                intervals = Channel.of(
+                    [ file(params.modules_testdata_base_path + 'genomics/homo_sapiens/genome/genome.bed', checkIfExists: true), 2 ],
+                    [ file(params.modules_testdata_base_path + 'genomics/homo_sapiens/genome/genome.multi_intervals.bed', checkIfExists: true), 2 ]
+                )
+
+                input[0] = cram
+                input[1] = dict
+                input[2] = fasta
+                input[3] = fasta_fai
+                input[4] = intervals
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert workflow.success },
+                // Every per-interval gVCF (and its index) must be filed under the SAME
+                // interval it was attached to - this is the invariant the bug violated.
+                { assert workflow.out.gvcf_tbi_intervals.size() == 4 },
+                { assert workflow.out.gvcf_tbi_intervals.every { meta, gvcf, tbi, intervals_ ->
+                    def interval_basename = file(intervals_).name.replaceAll(/\.bed$/, '')
+                    file(gvcf).name.contains(interval_basename) && file(tbi).name.contains(interval_basename)
+                } },
+                // Both samples' two interval-shards must still merge back into one
+                // per-sample gVCF/VCF (the groupKey fix must not break this).
+                { assert workflow.out.gvcf.size() == 2 },
+                { assert workflow.out.vcf.size() == 2 }
+            )
+        }
+    }
+}

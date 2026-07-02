@@ -1,0 +1,122 @@
+{
+    "Should run GLnexus with a BED region file (stub)": {
+        "content": [
+            [
+                [
+                    {
+                        "id": "test"
+                    },
+                    "test.bcf:md5,d41d8cd98f00b204e9800998ecf8427e"
+                ]
+            ],
+            [
+                [
+                    "GLNEXUS",
+                    "glnexus",
+                    "1.4.1"
+                ]
+            ]
+        ],
+        "timestamp": "2026-06-16T17:25:34.174642831",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "26.04.3"
+        }
+    },
+    "Should run GLnexus with a custom config": {
+        "content": [
+            [
+                [
+                    {
+                        "id": "test"
+                    },
+                    "test.bcf:md5,62b2cea9c1b92ac63645cb031eea46fc"
+                ]
+            ],
+            [
+                [
+                    "GLNEXUS",
+                    "glnexus",
+                    "1.4.1"
+                ]
+            ]
+        ],
+        "timestamp": "2026-06-16T17:24:53.216334367",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "26.04.3"
+        }
+    },
+    "Should run GLnexus with a BED region file": {
+        "content": [
+            [
+                [
+                    {
+                        "id": "test"
+                    },
+                    "test.bcf:md5,62b2cea9c1b92ac63645cb031eea46fc"
+                ]
+            ],
+            [
+                [
+                    "GLNEXUS",
+                    "glnexus",
+                    "1.4.1"
+                ]
+            ]
+        ],
+        "timestamp": "2026-06-16T17:25:16.780249111",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "26.04.3"
+        }
+    },
+    "Should run GLnexus with VCFs and no TBI indices": {
+        "content": [
+            [
+                [
+                    {
+                        "id": "test"
+                    },
+                    "test.bcf:md5,62b2cea9c1b92ac63645cb031eea46fc"
+                ]
+            ],
+            [
+                [
+                    "GLNEXUS",
+                    "glnexus",
+                    "1.4.1"
+                ]
+            ]
+        ],
+        "timestamp": "2026-06-16T17:24:07.764187711",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "26.04.3"
+        }
+    },
+    "Should run GLnexus with VCFs and TBI indices": {
+        "content": [
+            [
+                [
+                    {
+                        "id": "test"
+                    },
+                    "test.bcf:md5,62b2cea9c1b92ac63645cb031eea46fc"
+                ]
+            ],
+            [
+                [
+                    "GLNEXUS",
+                    "glnexus",
+                    "1.4.1"
+                ]
+            ]
+        ],
+        "timestamp": "2026-06-16T17:24:28.460897856",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "26.04.3"
+        }
+    }
+}
